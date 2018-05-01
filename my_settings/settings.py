@@ -21,23 +21,31 @@ class ReadOnlyDict(Mapping):
 
 class Settings:
 
-    __slots__ = ('_data',)
+    __slots__ = ('_data', 'primary_settings', 'custom_settings', 'test_settings')
 
     PYTEST_SCRIPT_NAME = 'py.test'
 
     def __init__(self, primary_settings, custom_settings=None, test_settings=None):
         self._data = {}
-        self._load_settings(primary_settings)
-        if custom_settings:
-            self._load_settings(custom_settings)
-        if test_settings and self._is_test_running():
-            self._load_settings(test_settings)
+        self.primary_settings = primary_settings
+        self.custom_settings = custom_settings
+        self.test_settings = test_settings
 
     def __getattr__(self, name):
+        if not self._data:
+            self._read_settings_sources()
+
         if name in self._data:
             return self._data[name]
         else:
             raise AttributeError("{} attribute doesn't exist".format(name))
+
+    def _read_settings_sources(self):
+        self._load_settings(self.primary_settings)
+        if self.custom_settings:
+            self._load_settings(self.custom_settings)
+        if self.test_settings and self._is_test_running():
+            self._load_settings(self.test_settings)
 
     def _is_test_running(self):
         if self.PYTEST_SCRIPT_NAME == os.path.basename(sys.argv[0]):
